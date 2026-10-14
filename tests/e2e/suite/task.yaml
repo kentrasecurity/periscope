@@ -1,0 +1,34 @@
+# Namespace doctor for the suite. run.sh starts it in Observe and switches it
+# to Automatic once every scenario has a diagnosis.
+apiVersion: periscope.kentrasecurity.io/v1alpha1
+kind: AgentTask
+metadata:
+  name: suite-doctor
+  namespace: agent-operator-test
+spec:
+  mode: Observe
+  scope:
+    namespaces: [agent-operator-test]
+    resources:
+      - labelSelector: "periscope.kentrasecurity.io/healing-protected!=true"
+  objective: >-
+    Keep the application workloads in this namespace healthy. For each failing
+    workload or Service, find the root cause from status, Events and logs, and
+    repair the owning template or the misconfigured resource with the smallest
+    change that restores the intended behaviour. Preserve images' intended
+    application, commands, configuration data, health probes and security
+    settings; never delete data or remove required configuration or probes to
+    pass checks.
+  monitoring:
+    intervalSeconds: 30
+    gracePeriodSeconds: 60
+  limits:
+    deadlineSeconds: 600
+    maxModelCalls: 12
+    maxToolCalls: 60
+  healingLimits:
+    maxAttemptsPerIncident: 3
+    retryCooldownSeconds: 30
+    windowSeconds: 3600
+    maxModelCallsPerWindow: 300
+    maxToolCallsPerWindow: 3000

@@ -1,0 +1,83 @@
+image:
+  repository: ghcr.io/kentrasecurity/docker/periscope
+  tag: ''              # default: the chart's appVersion
+  pullPolicy: IfNotPresent
+provider:
+  name: openai         # or anthropic
+  model: ''            # default: gpt-6-luna (openai), claude-opus-5-5 (anthropic)
+  api: ''              # OpenAI only; automatically chooses Responses for Luna
+  reasoningEffort: ''  # OpenAI Responses (default medium) or Anthropic effort low|medium|high (model default)
+  maxOutputTokens: 16000  # includes thinking on reasoning models
+  baseURL: ''          # default: the provider's public API
+  existingSecret: agent-llm
+  secretKey: api-key
+runbooks:
+  existingConfigMap: ''
+  key: runbooks.json
+rbac:
+  create: true
+# Workload access in every enrolled namespace (requires rbac.create).
+#   none:    owner supplies Roles for the investigator/executor/admission accounts
+#   observe: read access to application resources (no Secrets); enough for Observe/Propose
+#   repair:  observe plus executor patch/create/delete on common application
+#            resources; RBAC is never granted, Secret and PVC writes only as
+#            enabled under policy.repairs
+workloadRBAC:
+  preset: none
+  extraReadRules: []    # e.g. CRDs: [{apiGroups: [example.com], resources: [widgets], verbs: [get, list, watch]}]
+  extraRepairRules: []
+controller:
+  workers: 4                 # tasks reconciled in parallel per component
+  investigatorTimeout: 15m   # one investigation, including model calls
+  executorTimeout: 2m
+policy:
+  coordinationNamespace: ''  # defaults to the release namespace; must be enrolled
+  authorization: RBAC
+  healthURLs: {}
+  namespaces: []
+  readRules: []
+  capabilities: []
+  # Opt-in repairs, refused unless enabled; RBAC follows these settings.
+  repairs:
+    secrets:
+      # none | generate | fromSource | generate+fromSource. The executor fills
+      # values (random bytes or a copy of an allowed source); the model never
+      # sees or writes one. Existing Secrets are never changed.
+      create: none
+      sources: []          # Secrets in the same namespace that may be copied
+    storage:
+      replaceUnboundClaims: false  # recreate PVCs that never bound (no data)
+      expandClaims: false          # grow a PVC's storage request
+  experimental:
+    # Open incidents for healthy workloads whose recent logs repeat errors with
+    # a common Kubernetes-side cause (connection refused, timeouts, DNS,
+    # unreachable, TLS) and let the model trace them to NetworkPolicies,
+    # Services, DNS names or config. Repairs follow the task mode.
+    applicationErrors: false
+admission:
+  # Supply both for externally managed certificates; otherwise Helm generates
+  # and retains its own CA and serving Secret across upgrades.
+  existingSecret: ''
+  caBundle: ''
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+observations:
+  prometheus:
+    enabled: false
+    baseURL: ''
+    scopeBoundary: SingleNamespace
+    namespaces: []
+    existingSecret: ''
+    secretKey: token
+    allowHTTP: false
+  network:
+    enabled: false
+    endpoints: []
+    existingSecret: ''
+    allowHTTP: false

@@ -1,0 +1,4 @@
+# Layer on the suite values to test application errors (SUITE_EXPERIMENTAL=1).
+policy:
+  experimental:
+    applicationErrors: true

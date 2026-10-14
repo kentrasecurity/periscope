@@ -1,0 +1,688 @@
+{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {
+    "name": "actionplans.periscope.kentrasecurity.io"
+  },
+  "spec": {
+    "group": "periscope.kentrasecurity.io",
+    "scope": "Namespaced",
+    "names": {
+      "kind": "ActionPlan",
+      "plural": "actionplans",
+      "singular": "actionplan"
+    },
+    "versions": [
+      {
+        "name": "v1alpha1",
+        "served": true,
+        "storage": true,
+        "subresources": {
+          "status": {}
+        },
+        "additionalPrinterColumns": [
+          {
+            "name": "Phase",
+            "type": "string",
+            "jsonPath": ".status.phase"
+          },
+          {
+            "name": "Task",
+            "type": "string",
+            "jsonPath": ".spec.taskRef.name"
+          },
+          {
+            "name": "Age",
+            "type": "date",
+            "jsonPath": ".metadata.creationTimestamp"
+          }
+        ],
+        "schema": {
+          "openAPIV3Schema": {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "kind": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "metadata": {
+                "type": "object"
+              },
+              "spec": {
+                "type": "object",
+                "properties": {
+                  "checks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "path": {
+                          "type": "string",
+                          "maxLength": 1024
+                        },
+                        "expected": {
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "query": {
+                          "type": "string",
+                          "maxLength": 8192
+                        },
+                        "endpoint": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "vantage": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "timeoutSeconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1800
+                        },
+                        "stableWindowSeconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 600
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "target"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "targets": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "preconditions": {
+                          "type": "object",
+                          "properties": {
+                            "specDigest": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "specDigest"
+                          ]
+                        },
+                        "afterActionID": {
+                          "type": "string",
+                          "maxLength": 128
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "target",
+                        "preconditions"
+                      ]
+                    },
+                    "maxItems": 20
+                  },
+                  "incidentID": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "originalChecksDigest": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "taskCycle": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740992
+                  },
+                  "taskRef": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      "uid": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "uid"
+                    ]
+                  },
+                  "taskGeneration": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740992
+                  },
+                  "targetRef": {
+                    "type": "object",
+                    "properties": {
+                      "apiVersion": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "kind": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "maxLength": 63
+                      },
+                      "uid": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "apiVersion",
+                      "kind",
+                      "name"
+                    ]
+                  },
+                  "preconditions": {
+                    "type": "object",
+                    "properties": {
+                      "specDigest": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "specDigest"
+                    ]
+                  },
+                  "policyDigest": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "diagnosis": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "risk": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "actions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "bindingID": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 32,
+                          "enum": [
+                            "RestartWorkload",
+                            "PatchResource",
+                            "CreateResource",
+                            "DeleteResource"
+                          ]
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "patch": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "maxLength": 16,
+                                "enum": [
+                                  "add",
+                                  "replace",
+                                  "remove",
+                                  "test"
+                                ]
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 1024
+                              },
+                              "value": {
+                                "x-kubernetes-preserve-unknown-fields": true
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path"
+                            ]
+                          },
+                          "maxItems": 32
+                        },
+                        "object": {
+                          "type": "object",
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "secretSources": {
+                          "type": "object",
+                          "maxProperties": 32,
+                          "additionalProperties": {
+                            "type": "object",
+                            "properties": {
+                              "generate": {
+                                "type": "integer",
+                                "minimum": 16,
+                                "maximum": 64
+                              },
+                              "fromSecret": {
+                                "type": "string",
+                                "maxLength": 253
+                              },
+                              "fromKey": {
+                                "type": "string",
+                                "maxLength": 253
+                              }
+                            },
+                            "required": []
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type"
+                      ]
+                    },
+                    "maxItems": 10
+                  },
+                  "verification": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      "timeoutSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1800
+                      },
+                      "stableWindowSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      "expected": {
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "healthURL": {
+                        "type": "string",
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "timeoutSeconds",
+                      "stableWindowSeconds"
+                    ]
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 1024
+                        },
+                        "collectedAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "content": {
+                          "type": "string",
+                          "maxLength": 8192
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "collectedAt",
+                        "hash",
+                        "content"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "digest": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^sha256:[a-f0-9]{64}$"
+                  }
+                },
+                "required": [
+                  "taskRef",
+                  "taskGeneration",
+                  "targetRef",
+                  "preconditions",
+                  "policyDigest",
+                  "diagnosis",
+                  "risk",
+                  "actions",
+                  "verification",
+                  "digest"
+                ],
+                "x-kubernetes-validations": [
+                  {
+                    "rule": "self.digest == oldSelf.digest",
+                    "message": "plan digest is immutable"
+                  }
+                ]
+              },
+              "status": {
+                "type": "object",
+                "properties": {
+                  "checkResults": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "checkID": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "healthy": {
+                          "type": "boolean"
+                        },
+                        "fingerprint": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "observation": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "observedAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 1024
+                        }
+                      },
+                      "required": [
+                        "checkID",
+                        "healthy",
+                        "observation",
+                        "observedAt",
+                        "source"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "phase": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "approvalUID": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "state": {
+                          "type": "string",
+                          "maxLength": 32
+                        },
+                        "operation": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "beforeDigest": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "afterDigest": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "resultUID": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "serverResultDigest": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "error": {
+                          "type": "string",
+                          "maxLength": 4096
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "state",
+                        "operation",
+                        "beforeDigest",
+                        "updatedAt"
+                      ]
+                    },
+                    "maxItems": 10
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "status": {
+                          "type": "string",
+                          "maxLength": 8,
+                          "enum": [
+                            "True",
+                            "False",
+                            "Unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "message": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "observedGeneration": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740992
+                        },
+                        "lastTransitionTime": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "status",
+                        "reason",
+                        "message",
+                        "lastTransitionTime"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "stableSince": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  },
+                  "verificationFingerprint": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "executionStartedAt": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  }
+                },
+                "required": []
+              }
+            },
+            "required": [
+              "spec"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

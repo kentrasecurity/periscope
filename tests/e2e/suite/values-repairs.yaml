@@ -1,0 +1,8 @@
+# Layer on the suite values to test opt-in repairs (run with SUITE_REPAIRS=1):
+# generated Secret values and replacement of never-bound PVCs.
+policy:
+  repairs:
+    secrets:
+      create: generate
+    storage:
+      replaceUnboundClaims: true

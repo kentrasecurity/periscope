@@ -1,0 +1,155 @@
+{{- $root := . -}}
+{{- $name := include "periscope.name" . -}}
+{{- range $mode := list "admission" "investigator" "executor" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}-{{ $mode }}
+  labels:
+    # Discovery skips, and plans may never target, the operator's own workloads.
+    app.kubernetes.io/part-of: periscope
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $name }}-{{ $mode }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $name }}-{{ $mode }}
+        app.kubernetes.io/part-of: periscope
+      annotations:
+        periscope.kentrasecurity.io/observations-checksum: {{ $root.Values.observations | toJson | sha256sum | quote }}
+        periscope.kentrasecurity.io/policy-checksum: {{ $root.Values.policy | toJson | sha256sum | quote }}
+    spec:
+      serviceAccountName: {{ $name }}-{{ $mode }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: operator
+          image: {{ printf "%s:%s" $root.Values.image.repository ($root.Values.image.tag | default $root.Chart.AppVersion) | quote }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          args:
+            - --mode={{ $mode }}
+            - --identity=system:serviceaccount:{{ $root.Release.Namespace }}:{{ $name }}-{{ $mode }}
+{{- if ne $mode "admission" }}
+            - --workers={{ $root.Values.controller.workers }}
+            - --reconcile-timeout={{ ternary $root.Values.controller.investigatorTimeout $root.Values.controller.executorTimeout (eq $mode "investigator") }}
+{{- end }}
+{{- if eq $mode "admission" }}
+            - --investigator-user=system:serviceaccount:{{ $root.Release.Namespace }}:{{ $name }}-investigator
+            - --executor-user=system:serviceaccount:{{ $root.Release.Namespace }}:{{ $name }}-executor
+{{- else if eq $mode "investigator" }}
+            - --provider={{ $root.Values.provider.name }}
+{{- with $root.Values.provider.model }}
+            - --model={{ . }}
+{{- end }}
+            - --provider-api={{ $root.Values.provider.api }}
+            - --reasoning-effort={{ $root.Values.provider.reasoningEffort }}
+            - --max-output-tokens={{ $root.Values.provider.maxOutputTokens | default 16000 }}
+{{- with $root.Values.provider.baseURL }}
+            - --base-url={{ . }}
+{{- end }}
+{{- if $root.Values.runbooks.existingConfigMap }}
+            - --runbooks=/runbooks/runbooks.json
+{{- end }}
+{{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: health
+              containerPort: 8080
+{{- if eq $mode "admission" }}
+            - name: https
+              containerPort: 8443
+{{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+          resources: {{ $root.Values.resources | toJson }}
+          volumeMounts:
+            - name: policy
+              mountPath: /config
+              readOnly: true
+{{- if and $root.Values.observations.prometheus.enabled $root.Values.observations.prometheus.existingSecret }}
+            - name: prometheus-credential
+              mountPath: /observations
+              readOnly: true
+{{- end }}
+{{- if and $root.Values.observations.network.enabled $root.Values.observations.network.existingSecret }}
+            - name: probe-credential
+              mountPath: /probe-credentials
+              readOnly: true
+{{- end }}
+{{- if eq $mode "investigator" }}
+            - name: credential
+              mountPath: /credentials
+              readOnly: true
+{{- if $root.Values.runbooks.existingConfigMap }}
+            - name: runbooks
+              mountPath: /runbooks
+              readOnly: true
+{{- end }}
+{{- else if eq $mode "admission" }}
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+{{- end }}
+      volumes:
+        - name: policy
+          configMap:
+            name: {{ $name }}-policy
+{{- if and $root.Values.observations.prometheus.enabled $root.Values.observations.prometheus.existingSecret }}
+        - name: prometheus-credential
+          secret:
+            secretName: {{ $root.Values.observations.prometheus.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ $root.Values.observations.prometheus.secretKey }}
+                path: prometheus-token
+{{- end }}
+{{- if and $root.Values.observations.network.enabled $root.Values.observations.network.existingSecret }}
+        - name: probe-credential
+          secret:
+            secretName: {{ $root.Values.observations.network.existingSecret }}
+            defaultMode: 0440
+{{- end }}
+{{- if eq $mode "investigator" }}
+        - name: credential
+          secret:
+            secretName: {{ required "provider.existingSecret required" $root.Values.provider.existingSecret }}
+            defaultMode: 0440
+            items:
+              - key: {{ $root.Values.provider.secretKey }}
+                path: api-key
+{{- if $root.Values.runbooks.existingConfigMap }}
+        - name: runbooks
+          configMap:
+            name: {{ $root.Values.runbooks.existingConfigMap }}
+            items:
+              - key: {{ $root.Values.runbooks.key }}
+                path: runbooks.json
+{{- end }}
+{{- else if eq $mode "admission" }}
+        - name: tls
+          secret:
+            secretName: {{ default (printf "%s-tls" $name) $root.Values.admission.existingSecret }}
+            defaultMode: 0440
+{{- end }}
+{{- end }}

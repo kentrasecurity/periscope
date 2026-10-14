@@ -1,0 +1,93 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
+      - 'Makefile'
+      - 'charts/periscope/Chart.yaml'
+      - '.github/workflows/docker-build-push.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/docker/periscope
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: make test
+
+      - name: Build binaries
+        run: |
+          make build GOARCH=amd64
+          make build GOARCH=arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract appVersion from Chart.yaml and determine tags
+        id: tags
+        run: |
+          APP_VERSION=$(grep '^appVersion:' charts/periscope/Chart.yaml | awk '{print $2}' | tr -d '"')
+          if [ -z "$APP_VERSION" ]; then
+            echo "Error: Could not extract appVersion from Chart.yaml"
+            exit 1
+          fi
+          IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            TAGS="${IMAGE}:${APP_VERSION},${IMAGE}:latest"
+          else
+            TAGS="${IMAGE}:${APP_VERSION}-${{ github.ref_name }}"
+          fi
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.tags.outputs.image }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Image tags
+        run: |
+          echo "Image built and pushed with tags:"
+          echo "${{ steps.tags.outputs.tags }}"

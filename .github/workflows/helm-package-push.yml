@@ -1,0 +1,56 @@
+name: Package and Push Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'charts/periscope/**'
+      - '.github/workflows/helm-package-push.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  package-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Log in to Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} --username ${{ github.actor }} --password-stdin
+
+      - name: Set Helm chart version and package
+        run: |
+          CHART_NAME=$(grep '^name:' charts/periscope/Chart.yaml | awk '{print $2}')
+          BASE_VERSION=$(grep '^version:' charts/periscope/Chart.yaml | awk '{print $2}')
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            CHART_VERSION="${BASE_VERSION}"
+          else
+            CHART_VERSION="${BASE_VERSION}-${{ github.ref_name }}"
+          fi
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/periscope/Chart.yaml
+          helm lint charts/periscope -f tests/e2e/suite/values-openai.yaml
+          helm package charts/periscope
+          echo "CHART_NAME=${CHART_NAME}" >> $GITHUB_ENV
+          echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_ENV
+
+      - name: Push Helm chart to registry
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm push ${{ env.CHART_NAME }}-${{ env.CHART_VERSION }}.tgz oci://${{ env.REGISTRY }}/${OWNER}/helm
+
+      - name: Chart pushed
+        run: |
+          echo "Chart pushed: ${{ env.CHART_NAME }}:${{ env.CHART_VERSION }}"

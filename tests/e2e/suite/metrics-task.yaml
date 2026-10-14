@@ -1,0 +1,42 @@
+# Metrics doctor: suite-throttle is Running and Ready, so only Prometheus shows
+# its failure. A scoped task with checks evaluates only those checks, so this
+# runs beside suite-doctor. Prometheus queries go through suite-prom-proxy
+# (prom-proxy.yaml); the source's namespaces must equal the task scope exactly.
+apiVersion: periscope.kentrasecurity.io/v1alpha1
+kind: AgentTask
+metadata:
+  name: suite-metrics
+  namespace: agent-operator-test
+spec:
+  mode: Observe
+  scope:
+    namespaces: [agent-operator-test]
+  checks:
+    - id: cpu-throttling
+      type: Prometheus
+      target: {apiVersion: apps/v1, kind: Deployment, namespace: agent-operator-test, name: suite-throttle}
+      # 1 while more than a quarter of the worker's CPU periods are throttled.
+      query: >-
+        max(rate(container_cpu_cfs_throttled_periods_total{container="worker",pod=~"suite-throttle-.*"}[2m])
+        / rate(container_cpu_cfs_periods_total{container="worker",pod=~"suite-throttle-.*"}[2m])) > bool 0.25
+      expected: "0"
+      timeoutSeconds: 600
+      stableWindowSeconds: 60
+  objective: >-
+    Keep the suite-throttle worker's CPU throttling low so it keeps up with its
+    work. Find the cause from Prometheus metrics, status and the workload
+    template, and apply the smallest change that restores it. Preserve the
+    command, image and memory settings.
+  monitoring:
+    intervalSeconds: 30
+    gracePeriodSeconds: 60
+  limits:
+    deadlineSeconds: 600
+    maxModelCalls: 12
+    maxToolCalls: 60
+  healingLimits:
+    maxAttemptsPerIncident: 3
+    retryCooldownSeconds: 30
+    windowSeconds: 3600
+    maxModelCallsPerWindow: 40
+    maxToolCallsPerWindow: 400

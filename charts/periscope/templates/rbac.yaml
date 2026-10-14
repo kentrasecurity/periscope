@@ -1,0 +1,114 @@
+{{- $root := . -}}
+{{- $name := include "periscope.name" . -}}
+{{- range $mode := list "investigator" "executor" "admission" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}-{{ $mode }}
+  namespace: {{ $root.Release.Namespace }}
+automountServiceAccountToken: true
+{{- if $root.Values.rbac.create }}
+{{- range $ns := $root.Values.policy.namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-{{ $mode }}
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [agenttasks, actionplans, actionapprovals]
+    verbs: [get, list, watch]
+{{- if eq $mode "investigator" }}
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [agenttasks/status]
+    verbs: [update]
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [actionplans, actionapprovals]
+    verbs: [create]
+{{- end }}
+{{- if eq $mode "executor" }}
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [agenttasks/status, actionplans/status]
+    verbs: [update]
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, create, update]
+{{- else if eq $mode "admission" }}
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get]
+{{- end }}
+{{- if ne $root.Values.policy.authorization "RBAC" }}
+{{- range $rule := $root.Values.policy.readRules }}
+{{- if eq $rule.namespace $ns }}
+  - apiGroups: [{{ if contains "/" $rule.apiVersion }}{{ (splitList "/" $rule.apiVersion | first) | quote }}{{ else }}""{{ end }}]
+    resources: [{{ $rule.resource | quote }}]
+    verbs: [get{{ if not $rule.names }}, list{{ end }}]
+{{- if $rule.names }}
+    resourceNames: {{ $rule.names | toJson }}
+{{- end }}
+{{- if and (eq $mode "investigator") (eq $rule.kind "Pod") }}
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+{{- if $rule.names }}
+    resourceNames: {{ $rule.names | toJson }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- range $cap := $root.Values.policy.capabilities }}
+{{- if eq $cap.namespace $ns }}
+  - apiGroups: [{{ if contains "/" $cap.apiVersion }}{{ (splitList "/" $cap.apiVersion | first) | quote }}{{ else }}""{{ end }}]
+    resources: [{{ $cap.resource | quote }}]
+    resourceNames: {{ $cap.names | toJson }}
+    verbs: [get{{ if eq $mode "executor" }}{{ if or (has "PatchResource" $cap.types) (has "RestartWorkload" $cap.types) }}, patch{{ end }}{{ if has "DeleteResource" $cap.types }}, delete{{ end }}{{ end }}]
+{{- if and (eq $mode "executor") (has "CreateResource" $cap.types) }}
+  # Kubernetes RBAC cannot restrict create by resourceNames; admission binds
+  # create to the administrator's exact object template and approved plan.
+  - apiGroups: [{{ if contains "/" $cap.apiVersion }}{{ (splitList "/" $cap.apiVersion | first) | quote }}{{ else }}""{{ end }}]
+    resources: [{{ $cap.resource | quote }}]
+    verbs: [create]
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-{{ $mode }}
+  namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-{{ $mode }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-{{ $mode }}
+    namespace: {{ $root.Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.rbac.create }}
+{{- range $ns := .Values.policy.namespaces }}
+{{- range $role := list "submitter" "approver" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-{{ $role }}
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [agenttasks, actionplans, actionapprovals]
+    verbs: [get, list, watch]
+  - apiGroups: [periscope.kentrasecurity.io]
+    resources: [{{ if eq $role "submitter" }}agenttasks{{ else }}actionapprovals{{ end }}]
+    verbs: [create, update, patch{{ if eq $role "submitter" }}, delete{{ end }}]
+{{- end }}
+{{- end }}
+
+{{- end }}

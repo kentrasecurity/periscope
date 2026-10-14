@@ -1,0 +1,481 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "image",
+    "provider",
+    "policy",
+    "admission",
+    "resources",
+    "runbooks"
+  ],
+  "properties": {
+    "image": {
+      "type": "object",
+      "required": [
+        "repository",
+        "tag",
+        "pullPolicy"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "pullPolicy": {
+          "enum": [
+            "Never",
+            "IfNotPresent",
+            "Always"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "provider": {
+      "type": "object",
+      "required": [
+        "name",
+        "model",
+        "baseURL",
+        "existingSecret",
+        "secretKey"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "openai",
+            "anthropic"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "baseURL": {
+          "type": "string",
+          "pattern": "^(https://.*)?$"
+        },
+        "existingSecret": {
+          "type": "string",
+          "minLength": 1
+        },
+        "secretKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "api": {
+          "enum": [
+            "",
+            "chat-completions",
+            "responses"
+          ]
+        },
+        "reasoningEffort": {
+          "enum": [
+            "",
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "maxOutputTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        }
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "required": [
+        "namespaces",
+        "readRules",
+        "capabilities"
+      ],
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "uniqueItems": true
+        },
+        "readRules": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "required": [
+              "apiVersion",
+              "kind",
+              "resource",
+              "namespace"
+            ]
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "required": [
+              "apiVersion",
+              "kind",
+              "resource",
+              "namespace",
+              "names",
+              "types",
+              "risk",
+              "requireApproval"
+            ],
+            "properties": {
+              "names": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "types": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "enum": [
+                    "PatchResource",
+                    "RestartWorkload",
+                    "CreateResource",
+                    "DeleteResource"
+                  ]
+                }
+              },
+              "requireApproval": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "authorization": {
+          "enum": [
+            "RBAC",
+            "LegacyCatalog"
+          ]
+        },
+        "healthURLs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "coordinationNamespace": {
+          "type": "string"
+        },
+        "repairs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "secrets": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "create": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "generate",
+                    "fromSource",
+                    "generate+fromSource"
+                  ]
+                },
+                "sources": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9.-]*$"
+                  }
+                }
+              }
+            },
+            "storage": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "replaceUnboundClaims": {
+                  "type": "boolean"
+                },
+                "expandClaims": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "experimental": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "applicationErrors": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "admission": {
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "caBundle": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "runbooks": {
+      "type": "object",
+      "required": [
+        "existingConfigMap",
+        "key"
+      ],
+      "properties": {
+        "existingConfigMap": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "object"
+    },
+    "rbac": {
+      "type": "object",
+      "properties": {
+        "create": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prometheus": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "baseURL",
+            "scopeBoundary",
+            "namespaces",
+            "existingSecret",
+            "secretKey",
+            "allowHTTP"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "baseURL": {
+              "type": "string"
+            },
+            "scopeBoundary": {
+              "enum": [
+                "SingleNamespace",
+                "OwnerTenant"
+              ]
+            },
+            "namespaces": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "secretKey": {
+              "type": "string",
+              "minLength": 1
+            },
+            "allowHTTP": {
+              "type": "boolean"
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "endpoints",
+            "existingSecret",
+            "allowHTTP"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "endpoints": {
+              "type": "array",
+              "maxItems": 32,
+              "items": {
+                "type": "object"
+              }
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "allowHTTP": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "workloadRBAC": {
+      "type": "object",
+      "properties": {
+        "preset": {
+          "type": "string",
+          "enum": [
+            "none",
+            "observe",
+            "repair"
+          ]
+        },
+        "extraReadRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "apiGroups": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resources": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "not": {
+                    "enum": [
+                      "secrets",
+                      "*",
+                      "roles",
+                      "rolebindings",
+                      "serviceaccounts/token"
+                    ]
+                  }
+                }
+              },
+              "verbs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resourceNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "apiGroups",
+              "resources",
+              "verbs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "extraRepairRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "apiGroups": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resources": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "not": {
+                    "enum": [
+                      "secrets",
+                      "*",
+                      "roles",
+                      "rolebindings",
+                      "serviceaccounts/token"
+                    ]
+                  }
+                }
+              },
+              "verbs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "resourceNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "apiGroups",
+              "resources",
+              "verbs"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "controller": {
+      "type": "object",
+      "properties": {
+        "workers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "investigatorTimeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(s|m|h)$"
+        },
+        "executorTimeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(s|m|h)$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

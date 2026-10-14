@@ -1,0 +1,9 @@
+# Layer on tests/e2e/suite/values-openai.yaml for the suite:
+# Prometheus through the namespace-enforcing suite-prom-proxy.
+observations:
+  prometheus:
+    enabled: true
+    baseURL: http://suite-prom-proxy.agent-operator-test.svc:8080
+    allowHTTP: true
+    scopeBoundary: SingleNamespace
+    namespaces: [agent-operator-test]

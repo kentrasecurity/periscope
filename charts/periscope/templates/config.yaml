@@ -1,0 +1,19 @@
+{{- include "periscope.namespaces" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "periscope.name" . }}-policy
+data:
+  policy.json: |
+    {{- $policy := deepCopy .Values.policy }}
+    {{- $_ := set $policy "coordinationNamespace" (default .Release.Namespace .Values.policy.coordinationNamespace) }}
+    {{ $policy | toJson }}
+  observations.json: |
+    {{- $sources := dict }}
+    {{- if .Values.observations.prometheus.enabled }}
+    {{- $_ := set $sources "prometheus" (dict "baseURL" .Values.observations.prometheus.baseURL "scopeBoundary" .Values.observations.prometheus.scopeBoundary "namespaces" .Values.observations.prometheus.namespaces "allowHTTP" .Values.observations.prometheus.allowHTTP "tokenFile" (ternary "/observations/prometheus-token" "" (ne .Values.observations.prometheus.existingSecret ""))) }}
+    {{- end }}
+    {{- if .Values.observations.network.enabled }}
+    {{- $_ := set $sources "network" (dict "endpoints" .Values.observations.network.endpoints "allowHTTP" .Values.observations.network.allowHTTP) }}
+    {{- end }}
+    {{ $sources | toJson }}

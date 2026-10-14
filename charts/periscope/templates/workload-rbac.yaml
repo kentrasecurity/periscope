@@ -1,0 +1,186 @@
+{{- /*
+Optional workload permissions for enrolled namespaces. "none" leaves workload
+access to owner-supplied Roles. "observe" grants read access for diagnosis.
+"repair" adds executor writes on common application resources. Secrets, RBAC
+and PersistentVolumeClaim deletion are never granted; the admission webhook
+still limits every executor write to the current approved plan.
+*/ -}}
+{{- $root := . -}}
+{{- $name := include "periscope.name" . -}}
+{{- $preset := .Values.workloadRBAC.preset -}}
+{{- if and (ne $preset "none") .Values.rbac.create }}
+{{- range $ns := $root.Values.policy.namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-workload-read
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, services, endpoints, configmaps, persistentvolumeclaims, events, replicationcontrollers, serviceaccounts, resourcequotas, limitranges]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets, replicasets, controllerrevisions]
+    verbs: [get, list, watch]
+  - apiGroups: [batch]
+    resources: [jobs, cronjobs]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list, watch]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list, watch]
+  - apiGroups: [events.k8s.io]
+    resources: [events]
+    verbs: [get, list, watch]
+{{- range $extra := $root.Values.workloadRBAC.extraReadRules }}
+  - {{ $extra | toJson }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-workload-read
+  namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-workload-read
+subjects:
+{{- range $mode := list "investigator" "executor" "admission" }}
+  - kind: ServiceAccount
+    name: {{ $name }}-{{ $mode }}
+    namespace: {{ $root.Release.Namespace }}
+{{- end }}
+{{- if eq $preset "repair" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-workload-repair
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [""]
+    resources: [pods, services, configmaps]
+    verbs: [patch, create, delete]
+{{- $storage := $root.Values.policy.repairs.storage }}
+{{- $claimVerbs := list }}
+{{- if $storage.expandClaims }}{{ $claimVerbs = append $claimVerbs "patch" }}{{ end }}
+{{- if $storage.replaceUnboundClaims }}{{ $claimVerbs = concat $claimVerbs (list "create" "delete") }}{{ end }}
+{{- if $claimVerbs }}
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: {{ $claimVerbs | toJson }}
+{{- end }}
+{{- $secrets := $root.Values.policy.repairs.secrets }}
+{{- if and $secrets.create (ne $secrets.create "none") }}
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [create]
+{{- end }}
+  - apiGroups: [apps]
+    resources: [deployments, statefulsets, daemonsets]
+    verbs: [patch]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [create, delete]
+  - apiGroups: [batch]
+    resources: [cronjobs]
+    verbs: [patch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [patch, create, delete]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [patch]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [patch]
+{{- range $extra := $root.Values.workloadRBAC.extraRepairRules }}
+  - {{ $extra | toJson }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-workload-repair
+  namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-workload-repair
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-executor
+    namespace: {{ $root.Release.Namespace }}
+{{- end }}
+{{- $secretRepairs := $root.Values.policy.repairs.secrets }}
+{{- if and (eq $preset "repair") $secretRepairs.create (ne $secretRepairs.create "none") }}
+---
+# Created Secrets are filled by the executor and confirmed by the executor and
+# admission (key names only); the investigator and the model never read them.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-secret-observe
+  namespace: {{ $ns }}
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-secret-observe
+  namespace: {{ $ns }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-secret-observe
+subjects:
+{{- range $mode := list "executor" "admission" }}
+  - kind: ServiceAccount
+    name: {{ $name }}-{{ $mode }}
+    namespace: {{ $root.Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- /*
+Replacing a never-bound claim needs the names of the cluster's StorageClasses,
+so a misspelled class is restored to the intended one. Read-only, and only
+with that opt-in.
+*/ -}}
+{{- if and .Values.rbac.create .Values.policy.repairs.storage.replaceUnboundClaims }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}-{{ .Release.Namespace }}-storageclasses
+rules:
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}-{{ .Release.Namespace }}-storageclasses
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}-{{ .Release.Namespace }}-storageclasses
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-investigator
+    namespace: {{ .Release.Namespace }}
+{{- end }}

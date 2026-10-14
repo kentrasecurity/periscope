@@ -1,0 +1,46 @@
+# Namespace-isolated Prometheus for the suite. rancher-monitoring is
+# cluster-wide, so the operator queries it through prom-label-proxy, which adds
+# namespace="agent-operator-test" to every query and rejects queries that ask
+# for another namespace (--error-on-replace).
+# The operator's PrometheusConfig scopeBoundary is only a declaration; the
+# endpoint itself must enforce it, as this proxy does.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: suite-prom-proxy
+  namespace: agent-operator-test
+  labels: {app.kubernetes.io/name: suite-prom-proxy, periscope.kentrasecurity.io/healing-protected: "true"}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: suite-prom-proxy}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: suite-prom-proxy, periscope.kentrasecurity.io/healing-protected: "true"}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: proxy
+          image: quay.io/prometheuscommunity/prom-label-proxy:v0.15.1
+          args:
+            - --insecure-listen-address=0.0.0.0:8080
+            - --upstream=http://rancher-monitoring-prometheus.cattle-monitoring-system.svc:9090
+            - --label=namespace
+            - --label-value=agent-operator-test
+            - --error-on-replace
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            tcpSocket: {port: 8080}
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 64Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: suite-prom-proxy
+  namespace: agent-operator-test
+  labels: {periscope.kentrasecurity.io/healing-protected: "true"}
+spec:
+  selector: {app.kubernetes.io/name: suite-prom-proxy}
+  ports: [{name: http, port: 8080, targetPort: 8080}]

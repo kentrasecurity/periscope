@@ -1,0 +1,23 @@
+# One release that monitors and repairs the namespace it is installed in,
+# using OpenAI. The release namespace holds the coordination Leases and must be
+# enrolled; the operator's own workloads are labelled and never self-repaired.
+#   kubectl create secret generic agent-llm -n agent-operator-test --from-file=api-key=./key
+#   kubectl apply -f charts/periscope/crds
+#   helm install periscope charts/periscope -n agent-operator-test -f tests/e2e/suite/values-openai.yaml
+image:              # imported with hack/import-local-images.sh
+  repository: periscope
+  tag: local
+  pullPolicy: Never
+policy:
+  authorization: RBAC
+  namespaces: [agent-operator-test]
+  healthURLs: {}
+  readRules: []
+  capabilities: []
+workloadRBAC:
+  preset: repair      # observe for diagnosis-only installations
+provider:
+  name: openai
+  model: ''           # gpt-6-luna by default (Responses API, medium reasoning)
+  existingSecret: agent-llm
+  secretKey: api-key

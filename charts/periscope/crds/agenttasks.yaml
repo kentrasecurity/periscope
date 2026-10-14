@@ -1,0 +1,1259 @@
+{
+  "apiVersion": "apiextensions.k8s.io/v1",
+  "kind": "CustomResourceDefinition",
+  "metadata": {
+    "name": "agenttasks.periscope.kentrasecurity.io"
+  },
+  "spec": {
+    "group": "periscope.kentrasecurity.io",
+    "scope": "Namespaced",
+    "names": {
+      "kind": "AgentTask",
+      "plural": "agenttasks",
+      "singular": "agenttask"
+    },
+    "versions": [
+      {
+        "name": "v1alpha1",
+        "served": true,
+        "storage": true,
+        "subresources": {
+          "status": {}
+        },
+        "additionalPrinterColumns": [
+          {
+            "name": "Mode",
+            "type": "string",
+            "jsonPath": ".spec.mode"
+          },
+          {
+            "name": "Phase",
+            "type": "string",
+            "jsonPath": ".status.phase"
+          },
+          {
+            "name": "Healthy",
+            "type": "boolean",
+            "jsonPath": ".status.healthy"
+          },
+          {
+            "name": "Last-Check",
+            "type": "date",
+            "jsonPath": ".status.lastCheckedAt"
+          },
+          {
+            "name": "Report",
+            "type": "string",
+            "jsonPath": ".status.report",
+            "priority": 1
+          },
+          {
+            "name": "Age",
+            "type": "date",
+            "jsonPath": ".metadata.creationTimestamp"
+          }
+        ],
+        "schema": {
+          "openAPIV3Schema": {
+            "type": "object",
+            "properties": {
+              "apiVersion": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "kind": {
+                "type": "string",
+                "maxLength": 1024
+              },
+              "metadata": {
+                "type": "object"
+              },
+              "spec": {
+                "type": "object",
+                "properties": {
+                  "healingLimits": {
+                    "type": "object",
+                    "properties": {
+                      "maxAttemptsPerIncident": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10
+                      },
+                      "retryCooldownSeconds": {
+                        "type": "integer",
+                        "minimum": 5,
+                        "maximum": 3600
+                      },
+                      "windowSeconds": {
+                        "type": "integer",
+                        "minimum": 60,
+                        "maximum": 86400
+                      },
+                      "maxModelCallsPerWindow": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      },
+                      "maxToolCallsPerWindow": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000
+                      }
+                    },
+                    "required": [
+                      "maxAttemptsPerIncident",
+                      "retryCooldownSeconds",
+                      "windowSeconds",
+                      "maxModelCallsPerWindow",
+                      "maxToolCallsPerWindow"
+                    ]
+                  },
+                  "scope": {
+                    "type": "object",
+                    "properties": {
+                      "namespaces": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 63,
+                          "minLength": 1
+                        },
+                        "maxItems": 16
+                      },
+                      "resources": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "labelSelector": {
+                              "type": "string",
+                              "maxLength": 1024
+                            }
+                          },
+                          "required": []
+                        },
+                        "maxItems": 32
+                      }
+                    },
+                    "required": [
+                      "namespaces"
+                    ]
+                  },
+                  "checks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "type": {
+                          "type": "string",
+                          "maxLength": 64
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "path": {
+                          "type": "string",
+                          "maxLength": 1024
+                        },
+                        "expected": {
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "query": {
+                          "type": "string",
+                          "maxLength": 8192
+                        },
+                        "endpoint": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "vantage": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "timeoutSeconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1800
+                        },
+                        "stableWindowSeconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 600
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "target"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "monitoring": {
+                    "type": "object",
+                    "properties": {
+                      "intervalSeconds": {
+                        "type": "integer",
+                        "minimum": 5,
+                        "maximum": 3600
+                      },
+                      "gracePeriodSeconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 3600
+                      }
+                    },
+                    "required": [
+                      "intervalSeconds"
+                    ]
+                  },
+                  "targetRef": {
+                    "type": "object",
+                    "properties": {
+                      "apiVersion": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "kind": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      "namespace": {
+                        "type": "string",
+                        "maxLength": 63
+                      },
+                      "uid": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "apiVersion",
+                      "kind",
+                      "name"
+                    ]
+                  },
+                  "mode": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "enum": [
+                      "Observe",
+                      "Propose",
+                      "HumanApproved",
+                      "Automatic"
+                    ]
+                  },
+                  "suspend": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "verification": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      "timeoutSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1800
+                      },
+                      "stableWindowSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      "expected": {
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "healthURL": {
+                        "type": "string",
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "timeoutSeconds",
+                      "stableWindowSeconds"
+                    ]
+                  },
+                  "objective": {
+                    "type": "string",
+                    "maxLength": 8192,
+                    "minLength": 1
+                  },
+                  "policyRef": {
+                    "type": "string",
+                    "maxLength": 253
+                  },
+                  "limits": {
+                    "type": "object",
+                    "properties": {
+                      "deadlineSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3600,
+                        "default": 600
+                      },
+                      "maxModelCalls": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 20,
+                        "default": 5
+                      },
+                      "maxToolCalls": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100,
+                        "default": 30
+                      }
+                    },
+                    "required": [],
+                    "default": {
+                      "deadlineSeconds": 600,
+                      "maxModelCalls": 5,
+                      "maxToolCalls": 30
+                    }
+                  }
+                },
+                "required": [
+                  "mode",
+                  "objective"
+                ],
+                "x-kubernetes-validations": [
+                  {
+                    "rule": "has(self.targetRef) != has(self.scope)",
+                    "message": "choose targetRef or scope"
+                  }
+                ]
+              },
+              "status": {
+                "type": "object",
+                "properties": {
+                  "scopeScanCursor": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65536
+                  },
+                  "lastScopeScanAt": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  },
+                  "budget": {
+                    "type": "object",
+                    "properties": {
+                      "windowStartedAt": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "format": "date-time"
+                      },
+                      "modelCalls": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "toolCalls": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "windowStartedAt",
+                      "modelCalls",
+                      "toolCalls"
+                    ]
+                  },
+                  "suspects": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "since": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "target",
+                        "since"
+                      ]
+                    },
+                    "maxItems": 100
+                  },
+                  "incident": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "target": {
+                        "type": "object",
+                        "properties": {
+                          "apiVersion": {
+                            "type": "string",
+                            "maxLength": 128
+                          },
+                          "kind": {
+                            "type": "string",
+                            "maxLength": 128
+                          },
+                          "name": {
+                            "type": "string",
+                            "maxLength": 253
+                          },
+                          "namespace": {
+                            "type": "string",
+                            "maxLength": 63
+                          },
+                          "uid": {
+                            "type": "string",
+                            "maxLength": 128
+                          }
+                        },
+                        "required": [
+                          "apiVersion",
+                          "kind",
+                          "name"
+                        ]
+                      },
+                      "attempt": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      },
+                      "originalChecks": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "type": {
+                              "type": "string",
+                              "maxLength": 64
+                            },
+                            "target": {
+                              "type": "object",
+                              "properties": {
+                                "apiVersion": {
+                                  "type": "string",
+                                  "maxLength": 128
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "maxLength": 128
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "maxLength": 253
+                                },
+                                "namespace": {
+                                  "type": "string",
+                                  "maxLength": 63
+                                },
+                                "uid": {
+                                  "type": "string",
+                                  "maxLength": 128
+                                }
+                              },
+                              "required": [
+                                "apiVersion",
+                                "kind",
+                                "name"
+                              ]
+                            },
+                            "path": {
+                              "type": "string",
+                              "maxLength": 1024
+                            },
+                            "expected": {
+                              "x-kubernetes-preserve-unknown-fields": true
+                            },
+                            "source": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "query": {
+                              "type": "string",
+                              "maxLength": 8192
+                            },
+                            "endpoint": {
+                              "type": "string",
+                              "maxLength": 2048
+                            },
+                            "vantage": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "timeoutSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 1800
+                            },
+                            "stableWindowSeconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 600
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "target"
+                          ]
+                        },
+                        "maxItems": 32
+                      },
+                      "originalChecksDigest": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "failureFingerprint": {
+                        "type": "string",
+                        "maxLength": 128
+                      },
+                      "nextAttemptAt": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "format": "date-time"
+                      },
+                      "priorPlanRefs": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "uid"
+                          ]
+                        },
+                        "maxItems": 32
+                      },
+                      "diagnosis": {
+                        "type": "string",
+                        "maxLength": 2048
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "maxLength": 32
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "target",
+                      "attempt",
+                      "originalChecks",
+                      "originalChecksDigest"
+                    ]
+                  },
+                  "pendingIncidents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "attempt": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000
+                        },
+                        "originalChecks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "type": {
+                                "type": "string",
+                                "maxLength": 64
+                              },
+                              "target": {
+                                "type": "object",
+                                "properties": {
+                                  "apiVersion": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "maxLength": 253
+                                  },
+                                  "namespace": {
+                                    "type": "string",
+                                    "maxLength": 63
+                                  },
+                                  "uid": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  }
+                                },
+                                "required": [
+                                  "apiVersion",
+                                  "kind",
+                                  "name"
+                                ]
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 1024
+                              },
+                              "expected": {
+                                "x-kubernetes-preserve-unknown-fields": true
+                              },
+                              "source": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "query": {
+                                "type": "string",
+                                "maxLength": 8192
+                              },
+                              "endpoint": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "vantage": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "timeoutSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1800
+                              },
+                              "stableWindowSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 600
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "target"
+                            ]
+                          },
+                          "maxItems": 32
+                        },
+                        "originalChecksDigest": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "failureFingerprint": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "nextAttemptAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "priorPlanRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "maxLength": 253
+                              },
+                              "uid": {
+                                "type": "string",
+                                "maxLength": 128
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "uid"
+                            ]
+                          },
+                          "maxItems": 32
+                        },
+                        "diagnosis": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "maxLength": 32
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "target",
+                        "attempt",
+                        "originalChecks",
+                        "originalChecksDigest"
+                      ]
+                    },
+                    "maxItems": 100
+                  },
+                  "incidentHistory": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "target": {
+                          "type": "object",
+                          "properties": {
+                            "apiVersion": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "kind": {
+                              "type": "string",
+                              "maxLength": 128
+                            },
+                            "name": {
+                              "type": "string",
+                              "maxLength": 253
+                            },
+                            "namespace": {
+                              "type": "string",
+                              "maxLength": 63
+                            },
+                            "uid": {
+                              "type": "string",
+                              "maxLength": 128
+                            }
+                          },
+                          "required": [
+                            "apiVersion",
+                            "kind",
+                            "name"
+                          ]
+                        },
+                        "attempt": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1000
+                        },
+                        "originalChecks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "type": {
+                                "type": "string",
+                                "maxLength": 64
+                              },
+                              "target": {
+                                "type": "object",
+                                "properties": {
+                                  "apiVersion": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "maxLength": 253
+                                  },
+                                  "namespace": {
+                                    "type": "string",
+                                    "maxLength": 63
+                                  },
+                                  "uid": {
+                                    "type": "string",
+                                    "maxLength": 128
+                                  }
+                                },
+                                "required": [
+                                  "apiVersion",
+                                  "kind",
+                                  "name"
+                                ]
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 1024
+                              },
+                              "expected": {
+                                "x-kubernetes-preserve-unknown-fields": true
+                              },
+                              "source": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "query": {
+                                "type": "string",
+                                "maxLength": 8192
+                              },
+                              "endpoint": {
+                                "type": "string",
+                                "maxLength": 2048
+                              },
+                              "vantage": {
+                                "type": "string",
+                                "maxLength": 128
+                              },
+                              "timeoutSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1800
+                              },
+                              "stableWindowSeconds": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 600
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "type",
+                              "target"
+                            ]
+                          },
+                          "maxItems": 32
+                        },
+                        "originalChecksDigest": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "failureFingerprint": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "nextAttemptAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "priorPlanRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "maxLength": 253
+                              },
+                              "uid": {
+                                "type": "string",
+                                "maxLength": 128
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "uid"
+                            ]
+                          },
+                          "maxItems": 32
+                        },
+                        "diagnosis": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "maxLength": 32
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "target",
+                        "attempt",
+                        "originalChecks",
+                        "originalChecksDigest"
+                      ]
+                    },
+                    "maxItems": 64
+                  },
+                  "observedGeneration": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740992
+                  },
+                  "phase": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "targetUID": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "approvalRef": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      "uid": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "uid"
+                    ]
+                  },
+                  "cycle": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740992
+                  },
+                  "lastCheckedAt": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  },
+                  "healthy": {
+                    "type": "boolean"
+                  },
+                  "monitorDigest": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "monitorUID": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "monitorStableSince": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  },
+                  "monitorFingerprint": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "monitorVerification": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      "timeoutSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1800
+                      },
+                      "stableWindowSeconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600
+                      },
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1024
+                      },
+                      "expected": {
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "healthURL": {
+                        "type": "string",
+                        "maxLength": 2048
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "timeoutSeconds",
+                      "stableWindowSeconds"
+                    ]
+                  },
+                  "attempt": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "modelCalls": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "toolCalls": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000
+                  },
+                  "planRef": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 253
+                      },
+                      "uid": {
+                        "type": "string",
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "uid"
+                    ]
+                  },
+                  "report": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "evidence": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "source": {
+                          "type": "string",
+                          "maxLength": 1024
+                        },
+                        "collectedAt": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "content": {
+                          "type": "string",
+                          "maxLength": 8192
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "collectedAt",
+                        "hash",
+                        "content"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "gaps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "maxLength": 1024
+                    },
+                    "maxItems": 32
+                  },
+                  "conditions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "status": {
+                          "type": "string",
+                          "maxLength": 8,
+                          "enum": [
+                            "True",
+                            "False",
+                            "Unknown"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "maxLength": 128
+                        },
+                        "message": {
+                          "type": "string",
+                          "maxLength": 4096
+                        },
+                        "observedGeneration": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740992
+                        },
+                        "lastTransitionTime": {
+                          "type": "string",
+                          "maxLength": 64,
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "status",
+                        "reason",
+                        "message",
+                        "lastTransitionTime"
+                      ]
+                    },
+                    "maxItems": 32
+                  },
+                  "startedAt": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  },
+                  "completedAt": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "format": "date-time"
+                  }
+                },
+                "required": []
+              }
+            },
+            "required": [
+              "spec"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
