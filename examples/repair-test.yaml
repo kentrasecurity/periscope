@@ -1,5 +1,5 @@
-# Broken workloads for autorepair testing.
-# Apply:   kubectl apply -f broken-k8s-testcases.yaml
+# Broken workloads to try Periscope on. Create an AgentTask in agent-operator-test (see the README).
+# Apply:   kubectl apply -f examples/repair-test.yaml
 # Cleanup: kubectl delete ns agent-operator-test
 # Each workload carries labels/annotations with the expected failure and the expected fix.
 ---

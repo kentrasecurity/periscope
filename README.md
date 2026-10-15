@@ -126,11 +126,16 @@ spec:
     Keep the application workloads in this namespace healthy. Find the root
     cause of each failure and repair it with the smallest change that restores
     the intended behaviour. Never delete data or remove probes to pass checks.
-  limits:
+  limits:                       # per investigation
     deadlineSeconds: 600
     maxModelCalls: 12
     maxToolCalls: 60
+  healingLimits:                # per hour, across the whole task
+    maxModelCallsPerWindow: 100
+    maxToolCallsPerWindow: 500
 ```
+
+Each investigation costs roughly 5 to 10 model calls. The hourly cap is a cost guard: when it is reached, remaining failures wait for the next window (`kubectl get agenttask` shows when) while health checks continue. The default is 20 calls an hour, enough for a few incidents; raise it for namespaces with many faults.
 
 ```bash
 kubectl apply -f shop-doctor.yaml
@@ -160,7 +165,7 @@ The most used Helm values:
 | --- | --- |
 | `policy.namespaces` | Namespaces Periscope may read and repair |
 | `workloadRBAC.preset` | `observe` (read only), `repair`, or `none` (bring your own Roles) |
-| `provider.name` / `provider.model` | `openai` (`gpt-6-luna`) or `anthropic` (`claude-opus-5-5`) |
+| `provider.name` / `provider.model` | `openai` (`gpt-6-luna`, validated live) or `anthropic` (`claude-opus-5-5`, implemented and unit-tested, not yet validated live) |
 | `provider.existingSecret` / `secretKey` | Secret holding the API key |
 | `policy.repairs.secrets.create` | Allow creating missing Secrets (`generate`, `fromSource`) |
 | `policy.repairs.storage.*` | Allow replacing never-bound PVCs and growing PVC requests |
