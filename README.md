@@ -130,7 +130,10 @@ spec:
     deadlineSeconds: 600
     maxModelCalls: 12
     maxToolCalls: 60
-  healingLimits:                # per hour, across the whole task
+  healingLimits:                # across the whole task, per window
+    maxAttemptsPerIncident: 3
+    retryCooldownSeconds: 30
+    windowSeconds: 3600
     maxModelCallsPerWindow: 100
     maxToolCallsPerWindow: 500
 ```
